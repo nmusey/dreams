@@ -10,8 +10,12 @@ interface AuthWrapperProps {
 export default function AuthWrapper({ children }: AuthWrapperProps) {
     const { status } = useSession() || "";
     useEffect(() => {
+        if (status == 'loading') {
+            return
+        }
+
         if (status !== 'authenticated') {
-            signIn('discord');
+            signIn();
         }
     }, [status]);
 

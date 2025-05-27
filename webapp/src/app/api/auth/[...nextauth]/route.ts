@@ -1,6 +1,8 @@
 import NextAuth from "next-auth";
 import DiscordProvider from "next-auth/providers/discord"
 
+console.log(process.env.DISCORD_CLIENT_ID);
+
 const handler = NextAuth({
   providers: [
     DiscordProvider({
@@ -11,4 +13,5 @@ const handler = NextAuth({
   secret: process.env.NEXTAUTH_SECRET!,
 });
 
-export { handler as GET, handler as POST };
+export const GET = handler;
+export const POST = handler;
