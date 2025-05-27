@@ -8,6 +8,10 @@ export default NextAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     }),
   ],
+  database: AppDataSource,
+  jwt: {
+    secret: process.env.JWT_SECRET,
+  },
   callbacks: {
     async signIn(user, account, profile) {
       return true;

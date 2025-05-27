@@ -9,8 +9,8 @@ services:
   db:
     image: postgres:latest
     environment:
-      POSTGRES_DB: dream_app_db
-      POSTGRES_USER: user
+      POSTGRES_DB: dreams
+      POSTGRES_USER: dreams
       POSTGRES_PASSWORD: password
     volumes:
       - db_data:/var/lib/postgresql/data
