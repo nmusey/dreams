@@ -1,4 +1,4 @@
-import { AppDataSource } from './db-config';
+import AppDataSource from '../db-config';
 
 export async function initDb() {
   try {

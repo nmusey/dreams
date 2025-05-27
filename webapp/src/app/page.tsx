@@ -1,15 +1,12 @@
-import Image from "next/image";
+import Providers from "./providers";
+import AuthWrapper from "./components/AuthWrapper";
 
 export default function Home() {
-  const { status } = useSession();
-
-  useEffect(() => {
-    if (status !== 'authenticated') {
-      signIn('google');
-    }
-  }, [status]);
-
   return (
-    <h1>Welcome!</h1>
+    <Providers>
+      <AuthWrapper>
+        <h1>Welcome!</h1>
+      </AuthWrapper>
+    </Providers>
   );
 }
