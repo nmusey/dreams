@@ -36,6 +36,7 @@ EXPOSE 3000
 # Start the application
 CMD ["node", "server.js"]
 
+# Development stage
 FROM node:20-alpine
 
 WORKDIR /app
@@ -53,4 +54,4 @@ COPY . .
 EXPOSE 3000
 
 # Start the development server with hot reloading
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "dev", "--", "-p", "3000"]

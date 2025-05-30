@@ -55,7 +55,9 @@ func main() {
 
 	// Register routes
 	mux.HandleFunc("GET /api/dreams", dreamHandler.HandleGetAll)
+	mux.HandleFunc("GET /api/dreams/{id}", dreamHandler.HandleGetById)
 	mux.HandleFunc("POST /api/dreams", dreamHandler.HandleCreate)
+	mux.HandleFunc("POST /api/dreams/{id}/generate-image", dreamHandler.HandleGenerateImage)
 	mux.HandleFunc("PUT /api/dreams/{id}", dreamHandler.HandleUpdate)
 	mux.HandleFunc("DELETE /api/dreams/{id}", dreamHandler.HandleDelete)
 

@@ -13,6 +13,13 @@ export abstract class Api {
       });
 
       console.log('Response status:', response.status);
+
+      // Handle 204 No Content as a special case - return the original response
+      if (response.status === 204) {
+        console.log('Received 204 No Content - this is a success');
+        return response;
+      }
+
       const responseText = await response.text();
       console.log('Response body:', responseText);
 
@@ -64,6 +71,9 @@ export abstract class Api {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+    if (response.status === 204) {
+      return undefined as T;
+    }
     if (response.headers.get('content-type')?.includes('application/json')) {
       const responseData = await response.json();
       console.log('PUT response:', responseData);
@@ -77,6 +87,10 @@ export abstract class Api {
     const response = await this.fetchWithError(`${this.baseUrl}${endpoint}`, {
       method: 'DELETE',
     });
+    if (response.status === 204) {
+      console.log('DELETE successful with no content');
+      return undefined as T;
+    }
     if (response.headers.get('content-type')?.includes('application/json')) {
       const responseData = await response.json();
       console.log('DELETE response:', responseData);

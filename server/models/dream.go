@@ -9,7 +9,8 @@ import (
 
 type Dream struct {
 	gorm.Model
-	Dream string `gorm:"type:text;not null" json:"dream"`
+	Dream    string `gorm:"type:text;not null" json:"dream"`
+	ImageURL string `gorm:"type:text" json:"image_url"`
 }
 
 // MarshalJSON implements custom JSON marshaling

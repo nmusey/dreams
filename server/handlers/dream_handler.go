@@ -22,7 +22,9 @@ func NewDreamHandler(db *gorm.DB) *DreamHandler {
 
 func (h *DreamHandler) RegisterRoutes() {
 	http.HandleFunc("GET /api/dreams", h.HandleGetAll)
+	http.HandleFunc("GET /api/dreams/{id}", h.HandleGetById)
 	http.HandleFunc("POST /api/dreams", h.HandleCreate)
+	http.HandleFunc("POST /api/dreams/{id}/generate-image", h.HandleGenerateImage)
 	http.HandleFunc("PUT /api/dreams/{id}", h.HandleUpdate)
 	http.HandleFunc("DELETE /api/dreams/{id}", h.HandleDelete)
 }
@@ -164,4 +166,68 @@ func (h *DreamHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Successfully deleted dream %d", id)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *DreamHandler) HandleGetById(w http.ResponseWriter, r *http.Request) {
+	// Extract dream ID from URL
+	idStr := strings.TrimPrefix(r.URL.Path, "/api/dreams/")
+	idStr = strings.TrimSuffix(idStr, "/")
+	log.Printf("Received request for dream ID: %s", idStr)
+
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		log.Printf("Invalid dream ID: %v", err)
+		http.Error(w, "Invalid dream ID", http.StatusBadRequest)
+		return
+	}
+
+	var dream models.Dream
+	if err := h.db.First(&dream, id).Error; err != nil {
+		log.Printf("Error finding dream: %v", err)
+		http.Error(w, "Dream not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(dream); err != nil {
+		log.Printf("Error encoding dream: %v", err)
+		http.Error(w, "Failed to encode dream", http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *DreamHandler) HandleGenerateImage(w http.ResponseWriter, r *http.Request) {
+	// Extract dream ID from URL
+	idStr := strings.TrimPrefix(r.URL.Path, "/api/dreams/")
+	idStr = strings.TrimSuffix(idStr, "/generate-image")
+	log.Printf("Received image generation request for dream ID: %s", idStr)
+
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		log.Printf("Invalid dream ID: %v", err)
+		http.Error(w, "Invalid dream ID", http.StatusBadRequest)
+		return
+	}
+
+	var dream models.Dream
+	if err := h.db.First(&dream, id).Error; err != nil {
+		log.Printf("Error finding dream: %v", err)
+		http.Error(w, "Dream not found", http.StatusNotFound)
+		return
+	}
+
+	// For now, just set a placeholder image URL
+	dream.ImageURL = "https://picsum.photos/800/800"
+	if err := h.db.Save(&dream).Error; err != nil {
+		log.Printf("Error updating dream with image URL: %v", err)
+		http.Error(w, "Failed to update dream", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(dream); err != nil {
+		log.Printf("Error encoding dream: %v", err)
+		http.Error(w, "Failed to encode dream", http.StatusInternalServerError)
+		return
+	}
 }
