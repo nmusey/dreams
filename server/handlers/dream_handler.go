@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"dreams/models"
+	"dreams/services"
 	"encoding/json"
 	"io"
 	"log"
@@ -13,11 +14,18 @@ import (
 )
 
 type DreamHandler struct {
-	db *gorm.DB
+	db           *gorm.DB
+	aiService    *services.AIService
+	queueService *services.QueueService
 }
 
 func NewDreamHandler(db *gorm.DB) *DreamHandler {
-	return &DreamHandler{db: db}
+	aiService := services.NewAIService()
+	return &DreamHandler{
+		db:           db,
+		aiService:    aiService,
+		queueService: services.NewQueueService(aiService),
+	}
 }
 
 func (h *DreamHandler) RegisterRoutes() {
@@ -216,8 +224,16 @@ func (h *DreamHandler) HandleGenerateImage(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// For now, just set a placeholder image URL
-	dream.ImageURL = "https://picsum.photos/800/800"
+	// Queue the image generation request
+	imageURL, err := h.queueService.EnqueueRequest(dream)
+	if err != nil {
+		log.Printf("Error generating image: %v", err)
+		http.Error(w, "Failed to generate image", http.StatusInternalServerError)
+		return
+	}
+
+	// Update dream with generated image URL
+	dream.ImageURL = imageURL
 	if err := h.db.Save(&dream).Error; err != nil {
 		log.Printf("Error updating dream with image URL: %v", err)
 		http.Error(w, "Failed to update dream", http.StatusInternalServerError)
