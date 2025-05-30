@@ -1,35 +1,24 @@
-"use client"
-
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import DreamRepository from '@/lib/repositories/dream-repository';
+import React, { useEffect, useState } from 'react';
+import fetchDreams from "@/app/components/DreamServerList";
+import DreamClientList from "@/components/DreamClientList";
 
 export default function DreamList() {
   const [dreams, setDreams] = useState<Dream[]>([]);
-  const router = useRouter();
-  const dreamRepository = new DreamRepository();
 
   useEffect(() => {
-    const fetchDreams = async () => {
+    const getDreams = async () => {
       try {
-        const fetchedDreams = await dreamRepository.findAll();
-        setDreams(fetchedDreams);
+        const { dreams } = await fetchDreams();
+        setDreams(dreams);
       } catch (error) {
         console.error('Error fetching dreams:', error);
       }
     };
 
-    fetchDreams();
+    getDreams();
   }, []);
 
   return (
-    <div>
-      <h2>Current Dreams</h2>
-      <ul>
-        {dreams.map((dream) => (
-          <li key={dream.id}>{dream.dream}</li>
-        ))}
-      </ul>
-    </div>
+    <DreamClientList dreams={dreams} />
   );
 }
