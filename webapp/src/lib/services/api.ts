@@ -57,4 +57,31 @@ export abstract class Api {
     console.log('POST response:', responseData);
     return responseData;
   }
+
+  protected async put<T>(endpoint: string, data: unknown): Promise<T> {
+    console.log('PUT request to:', `${this.baseUrl}${endpoint}`, 'with data:', data);
+    const response = await this.fetchWithError(`${this.baseUrl}${endpoint}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    if (response.headers.get('content-type')?.includes('application/json')) {
+      const responseData = await response.json();
+      console.log('PUT response:', responseData);
+      return responseData;
+    }
+    return undefined as T;
+  }
+
+  protected async delete<T>(endpoint: string): Promise<T> {
+    console.log('DELETE request to:', `${this.baseUrl}${endpoint}`);
+    const response = await this.fetchWithError(`${this.baseUrl}${endpoint}`, {
+      method: 'DELETE',
+    });
+    if (response.headers.get('content-type')?.includes('application/json')) {
+      const responseData = await response.json();
+      console.log('DELETE response:', responseData);
+      return responseData;
+    }
+    return undefined as T;
+  }
 }

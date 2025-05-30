@@ -11,12 +11,7 @@ services:
       - ./server:/app
       - /app/tmp
     environment:
-      - GIN_MODE=debug
-      - DB_HOST=db
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - DB_NAME=dreams
-      - DB_PORT=5432
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/dreams?sslmode=disable
     depends_on:
       - db
 

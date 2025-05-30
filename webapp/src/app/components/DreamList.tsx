@@ -45,7 +45,7 @@ export default function DreamList() {
             >
               <p className="text-gray-800">{dream.dream}</p>
               <p className="text-sm text-gray-500 mt-2">
-                {new Date(dream.createdAt).toLocaleDateString()}
+                {new Date(dream.created_at).toLocaleDateString()}
               </p>
             </div>
           ))}

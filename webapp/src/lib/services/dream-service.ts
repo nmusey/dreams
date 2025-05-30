@@ -16,6 +16,20 @@ export class DreamService extends Api {
   }
 
   async getAll(): Promise<Dream[]> {
-    return this.get<Dream[]>('/api/dreams');
+    console.log('Fetching all dreams...');
+    const dreams = await this.get<Dream[]>('/api/dreams');
+    console.log('Received dreams:', dreams);
+    return dreams;
+  }
+
+  async update(id: number, dream: string): Promise<Dream> {
+    console.log('Sending update request:', { id, dream });
+    const response = await this.put<Dream>(`/api/dreams/${id}`, { dream });
+    console.log('Update response:', response);
+    return response;
+  }
+
+  async removeDelete(id: number): Promise<void> {
+    await this.delete<void>(`/api/dreams/${id}`);
   }
 } 
