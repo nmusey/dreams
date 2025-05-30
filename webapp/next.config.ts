@@ -1,10 +1,12 @@
-import type { NextConfig } from "next";
+import { NextConfig } from 'next';
 
-const nextConfig: NextConfig = {
+const config: NextConfig = {
+  output: 'standalone',
   experimental: {
-    optimizeCss: false
-  },
-  optimizeFonts: false
+    serverActions: {
+      bodySizeLimit: '2mb'
+    }
+  }
 };
 
-export default nextConfig;
+export default config;

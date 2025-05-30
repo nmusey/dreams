@@ -10,7 +10,6 @@ export default function DreamForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // Assuming we have an API endpoint to save the dream
       await fetch('/api/dreams', {
         method: 'POST',
         headers: {

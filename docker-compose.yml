@@ -1,32 +1,50 @@
+version: '3.8'
+
 services:
-  webapp:
-    build: ./webapp
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "8080:8080"
+    volumes:
+      - ./server:/app
+      - /app/tmp
+    environment:
+      - GIN_MODE=debug
+      - DB_HOST=db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=dreams
+      - DB_PORT=5432
     depends_on:
       - db
+
+  webapp:
+    build:
+      context: ./webapp
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
     volumes:
-      - ./webapp:/usr/app
-    env_file:
-      .env
+      - ./webapp:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
+    depends_on:
+      - server
 
   db:
-    image: postgres:latest
-    environment:
-      POSTGRES_DB: dreams
-      POSTGRES_USER: dreams
-      POSTGRES_PASSWORD: password
-    volumes:
-      - db_data:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7-alpine
+    image: postgres:16-alpine
     ports:
-      - "6379:6379"
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=dreams
     volumes:
-      - redis_data:/data
-    restart: unless-stopped
+      - postgres_data:/var/lib/postgresql/data
 
 volumes:
-  db_data:
-  redis_data:
+  postgres_data:
