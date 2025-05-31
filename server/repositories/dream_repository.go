@@ -16,7 +16,7 @@ func NewDreamRepository(db *gorm.DB) *DreamRepository {
 
 func (r *DreamRepository) Create(content string) error {
 	dream := models.Dream{
-		Content: content,
+		Dream: content,
 	}
 	return r.db.Create(&dream).Error
 }
