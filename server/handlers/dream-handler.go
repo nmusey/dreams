@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -155,9 +156,15 @@ func (h *DreamHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DreamHandler) HandleGetById(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/api/dreams/")
-	idStr = strings.TrimSuffix(idStr, "/")
+	// Extract ID from URL using regex
+	re := regexp.MustCompile(`/api/dreams/(\d+)`)
+	matches := re.FindStringSubmatch(r.URL.Path)
+	if len(matches) != 2 {
+		http.Error(w, "Invalid dream ID", http.StatusBadRequest)
+		return
+	}
 
+	idStr := matches[1]
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		http.Error(w, "Invalid dream ID", http.StatusBadRequest)
@@ -224,7 +231,7 @@ func (h *DreamHandler) HandleGenerateImage(w http.ResponseWriter, r *http.Reques
 	}
 
 	log.Printf("HandleGenerateImage: Attempting to enqueue request for dream ID: %d", dream.ID)
-	
+
 	// Enqueue the image generation request
 	position, err := h.queueService.EnqueueRequest(dream)
 	if err != nil {
@@ -279,13 +286,13 @@ func (h *DreamHandler) HandleCheckImageStatus(w http.ResponseWriter, r *http.Req
 		ID       uint
 		ImageURL string
 	}
-	
+
 	// Use a more efficient query with only the fields we need
 	if err := h.db.Model(&models.Dream{}).
 		Select("id, image_url").
 		Where("id = ?", id).
 		First(&result).Error; err != nil {
-		
+
 		if err == gorm.ErrRecordNotFound {
 			http.Error(w, "Dream not found", http.StatusNotFound)
 			return

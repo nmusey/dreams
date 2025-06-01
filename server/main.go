@@ -5,13 +5,13 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"dreams/handlers"
 	"dreams/models"
 	"dreams/services"
 	"dreams/services/storage"
 
+	"github.com/rs/cors"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -21,8 +21,9 @@ type Config struct {
 	DatabaseURL string
 	Port        string
 	AIApiHost   string
+	AIEndpoint  string
 	AIModelName string
-	
+
 	// Storage configuration
 	StorageType    storage.StorageType
 	LocalDirectory string
@@ -48,19 +49,18 @@ func loadConfig() Config {
 	}
 
 	return Config{
-		DatabaseURL: getEnv("DATABASE_URL", "host=db user=postgres password=postgres dbname=dreams port=5432 sslmode=disable"),
+		DatabaseURL: getEnv("DATABASE_URL", "postgres://postgres:localhost:5432/dreams?sslmode=disable"),
 		Port:        getEnv("PORT", "8080"),
 		AIApiHost:   getEnv("AI_API_HOST", "http://localhost:11434"),
-		AIModelName: getEnv("AI_MODEL_NAME", "llava"),
-
-		// Storage configuration
+		AIEndpoint:  getEnv("AI_API_ENDPOINT", "/api/generate"),
+		AIModelName: getEnv("AI_MODEL_NAME", "stable-diffusion-1.5"),
 		StorageType:    storageType,
-		LocalDirectory: getEnv("STORAGE_LOCAL_DIR", filepath.Join(cwd, "images")),
-		S3Bucket:       os.Getenv("AWS_S3_BUCKET"),
-		S3Region:       os.Getenv("AWS_REGION"),
-		S3AccessKey:    os.Getenv("AWS_ACCESS_KEY_ID"),
-		S3SecretKey:    os.Getenv("AWS_SECRET_ACCESS_KEY"),
-		S3Endpoint:     os.Getenv("AWS_S3_ENDPOINT"),
+		LocalDirectory: getEnv("LOCAL_DIRECTORY", filepath.Join(cwd, "images")),
+		S3Bucket:       getEnv("S3_BUCKET", ""),
+		S3Region:       getEnv("S3_REGION", "us-east-1"),
+		S3AccessKey:    getEnv("S3_ACCESS_KEY", ""),
+		S3SecretKey:    getEnv("S3_SECRET_KEY", ""),
+		S3Endpoint:     getEnv("S3_ENDPOINT", ""),
 	}
 }
 
@@ -73,28 +73,21 @@ func getEnv(key, defaultValue string) string {
 	return value
 }
 
-// CORS middleware
-var corsMiddleware = func(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Set CORS headers
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		w.Header().Set("Vary", "Origin")
-
-		// Handle preflight requests
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
-		next.ServeHTTP(w, r)
+// Create CORS middleware
+var corsMiddleware = func() *cors.Cors {
+	return cors.New(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000", "https://localhost:3000"},
+		AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions},
+		AllowedHeaders:   []string{"Content-Type", "Authorization", "X-Requested-With", "X-CSRF-Token"},
+		AllowCredentials: true,
+		MaxAge:           3600,
+		Debug:            false,
 	})
 }
 
 func main() {
 	config := loadConfig()
-	
+
 	// Initialize storage provider
 	storageCfg := storage.Config{
 		Type:           config.StorageType,
@@ -117,7 +110,7 @@ func main() {
 			log.Fatalf("Failed to create local storage directory: %v", err)
 		}
 	}
-	
+
 	db, err := gorm.Open(postgres.Open(config.DatabaseURL), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
@@ -127,7 +120,7 @@ func main() {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
-	aiService := services.NewAIService(config.AIApiHost, config.AIModelName, storageProvider)
+	aiService := services.NewAIService(config.AIApiHost, config.AIEndpoint, config.AIModelName, storageProvider)
 
 	queueService := services.NewQueueService(aiService, db)
 	queueService.Start()
@@ -136,60 +129,22 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// Register routes
-	mux.HandleFunc("/api/dreams", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			dreamHandler.HandleGetAll(w, r)
-		case http.MethodPost:
-			dreamHandler.HandleCreate(w, r)
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
+	mux.HandleFunc("GET /api/dreams", dreamHandler.HandleGetAll)
+	mux.HandleFunc("POST /api/dreams", dreamHandler.HandleCreate)
+	mux.HandleFunc("GET /api/dreams/{id}", dreamHandler.HandleGetById)
+	mux.HandleFunc("PUT /api/dreams/{id}", dreamHandler.HandleUpdate)
+	mux.HandleFunc("DELETE /api/dreams/{id}", dreamHandler.HandleDelete)
+	mux.HandleFunc("POST /api/dreams/{id}/generate-image", dreamHandler.HandleGenerateImage)
+	mux.HandleFunc("GET /api/dreams/{id}/status", dreamHandler.HandleCheckImageStatus)
 
-	mux.HandleFunc("/api/dreams/", func(w http.ResponseWriter, r *http.Request) {
-		path := strings.TrimPrefix(r.URL.Path, "/api/dreams/")
-		
-		// Handle generate-image endpoint
-		if strings.HasSuffix(path, "/generate-image") {
-			dreamHandler.HandleGenerateImage(w, r)
-			return
-		}
-
-		// Handle status check endpoint
-		if strings.HasSuffix(path, "/status") {
-			dreamHandler.HandleCheckImageStatus(w, r)
-			return
-		}
-
-		// Extract ID for other operations
-		parts := strings.Split(path, "/")
-		if len(parts) == 0 || parts[0] == "" {
-			http.NotFound(w, r)
-			return
-		}
-
-		switch r.Method {
-		case http.MethodGet:
-			dreamHandler.HandleGetById(w, r)
-		case http.MethodPut:
-			dreamHandler.HandleUpdate(w, r)
-		case http.MethodDelete:
-			dreamHandler.HandleDelete(w, r)
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
-
-	// Wrap the mux with CORS middleware
-	handler := corsMiddleware(mux)
-
-	// Set up file server for local images if using local storage
 	if config.StorageType == storage.StorageTypeLocal {
 		fs := http.FileServer(http.Dir(config.LocalDirectory))
-		http.Handle("/images/", http.StripPrefix("/images/", fs))
+		mux.Handle("/images/", http.StripPrefix("/images/", fs))
 	}
+
+	// Wrap the mux with CORS middleware
+	c := corsMiddleware()
+	handler := c.Handler(mux)
 
 	log.Printf("Server starting on port %s...\n", config.Port)
 	log.Fatal(http.ListenAndServe(":"+config.Port, handler))

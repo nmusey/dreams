@@ -11,13 +11,14 @@ services:
       - /app/tmp
     environment:
       - DATABASE_URL=postgres://postgres:postgres@db:5432/dreams?sslmode=disable
-      - AI_API_HOST=http://ollama:11434
-      - AI_MODEL_NAME=llava
+      - AI_API_HOST=http://llm:11434
+      - AI_API_ENDPOINT=/v1/generate/text-to-image
+      - AI_MODEL_NAME=${AI_MODEL_NAME}
       - GOFLAGS=-mod=mod
       - CGO_ENABLED=0
     depends_on:
       - db
-      - ollama
+      - llm
     networks:
       - dreams-network
     dns:
@@ -65,20 +66,22 @@ services:
       timeout: 5s
       retries: 5
 
-  ollama:
-    image: ollama/ollama:latest
+  llm:
+    container_name: llm
+    image: ghcr.io/invoke-ai/invokeai:latest
     ports:
       - "11435:11434"
-    volumes:
-      - ./scripts:/scripts
-      - ollama_data:/root/.ollama
-    entrypoint: ["/bin/sh", "/scripts/ollama-entrypoint.sh"]
-    environment:
-      - OLLAMA_HOST=0.0.0.0
-      - OLLAMA_ORIGINS=*
+      - "9090:9090"
     networks:
       - dreams-network
-    container_name: ollama
+    volumes:
+      - llm_outputs:/invokeai/outputs
+      - llm_models:/invokeai/models
+    environment:
+      - INVOKEAI_API=true
+      - INVOKEAI_WEB=true
+      - INVOKEAI_API_PORT=11434
+      - INVOKEAI_DEFAULT_MODEL=${AI_MODEL_NAME}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
       interval: 5s
@@ -96,5 +99,6 @@ networks:
 
 volumes:
   postgres_data:
-  ollama_data:
+  llm_models:
+  llm_outputs:
   images:

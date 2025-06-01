@@ -8,6 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.67
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.80.0
 	github.com/google/uuid v1.6.0
+	github.com/rs/cors v1.11.1
 	gorm.io/driver/postgres v1.5.6
 	gorm.io/gorm v1.25.7
 )
